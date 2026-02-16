@@ -3,176 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DPMods Config Admin Panel</title>
+    <title>DPMods Admin Panel (GitHub)</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* CSS အားလုံးကို အရင်အတိုင်း ပြန်ထည့်ထားပါတယ် */
-        :root { --primary-color: #1DB954; --secondary-color: #282828; --background-color: #121212; --text-color: #FFFFFF; --text-secondary: #B3B3B3; --danger-color: #FF4D4D; }
-        body { font-family: 'Roboto', sans-serif; background-color: var(--background-color); color: var(--text-color); margin: 0; padding-bottom: 70px; }
-        header { background-color: var(--secondary-color); padding: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+        :root { --p: #1DB954; --s: #282828; --b: #121212; --t: #FFFFFF; --ts: #B3B3B3; }
+        body { font-family: 'Roboto', sans-serif; background: var(--b); color: var(--t); margin: 0; padding-bottom: 70px; }
+        header { background: var(--s); padding: 15px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.5); }
         .container { padding: 20px; max-width: 800px; margin: 0 auto; }
-        .user-item { background-color: var(--secondary-color); padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--primary-color); }
-        .user-item.expired { border-left-color: var(--danger-color); }
-        .user-item-info strong { display: block; color: var(--primary-color); font-size: 1.1rem; }
-        .user-item-info span { color: var(--text-secondary); font-size: 0.85rem; }
-        .form-group { margin-bottom: 15px; }
-        input, textarea { width: 100%; padding: 10px; border-radius: 6px; background: #333; border: 1px solid #444; color: #fff; box-sizing: border-box; }
-        nav { position: fixed; bottom: 0; width: 100%; height: 60px; background: var(--secondary-color); display: flex; justify-content: space-around; align-items: center; }
-        .nav-item { color: var(--text-secondary); font-size: 0.7rem; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
-        .nav-item.active { color: var(--primary-color); }
-        .add-user-btn { background: var(--primary-color); color: #000; width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; transform: translateY(-10px); }
+        .user-item { background: var(--s); padding: 15px; margin-bottom: 10px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid var(--p); }
+        .user-info strong { display: block; color: var(--p); font-size: 1.1rem; }
+        .user-info span { color: var(--ts); font-size: 0.85rem; display: block; }
+        input, textarea { width: 100%; padding: 10px; margin-bottom: 10px; border-radius: 6px; background: #333; border: 1px solid #444; color: #fff; box-sizing: border-box; }
+        nav { position: fixed; bottom: 0; width: 100%; height: 60px; background: var(--s); display: flex; justify-content: space-around; align-items: center; }
+        .nav-item { color: var(--ts); font-size: 0.7rem; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
+        .nav-item.active { color: var(--p); }
+        .add-btn { background: var(--p); color: #000; width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; transform: translateY(-10px); cursor: pointer; }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; justify-content: center; align-items: center; z-index: 2000; }
-        .modal-content { background: var(--secondary-color); padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; }
-        #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; justify-content: center; align-items: center; color: var(--primary-color); z-index: 3000; }
-        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #000; padding: 10px 20px; border-radius: 20px; opacity: 0; transition: 0.3s; }
+        .modal-content { background: var(--s); padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; }
+        #loading { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; color: var(--p); z-index: 3000; }
+        .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #333; padding: 10px 20px; border-radius: 20px; opacity: 0; transition: 0.3s; z-index: 4000; }
         .toast.show { opacity: 1; }
     </style>
 </head>
 <body>
 
-    <header><h1>DPMods Admin (GitHub)</h1></header>
+    <header><h1>DPMods Admin Panel</h1></header>
+    <div id="loading"><i class="fas fa-spinner fa-spin fa-2x"></i><p id="loadMsg">Syncing with GitHub...</p></div>
 
     <div class="container">
         <div id="usersTab">
             <h2>User Keys</h2>
             <div id="userList"></div>
         </div>
-
         <div id="settingsTab" style="display:none;">
-            <h2>Settings</h2>
-            <div class="form-group">
-                <label>Dialog Title</label>
-                <input type="text" id="dialogTitle">
-            </div>
-            <button style="background:var(--primary-color); padding:10px; border:none; width:100%; border-radius:6px;" onclick="triggerSettingsUpdate()">Save Settings</button>
+            <h2>Global Settings</h2>
+            <label>Dialog Title</label>
+            <input type="text" id="dialogTitle">
+            <label>Maintenance Message</label>
+            <textarea id="maintenanceMsg" rows="3"></textarea>
+            <button onclick="triggerUpdate()" style="background:var(--p); width:100%; padding:10px; border:none; border-radius:6px; font-weight:bold;">Save Global Settings</button>
         </div>
     </div>
 
     <nav>
-        <div class="nav-item active" onclick="showTab('users')"><i class="fas fa-users"></i><span>Users</span></div>
-        <div class="add-user-btn" onclick="showUserModal()"><i class="fas fa-plus"></i></div>
-        <div class="nav-item" onclick="showTab('settings')"><i class="fas fa-cog"></i><span>Settings</span></div>
+        <div class="nav-item active" onclick="showTab('users')" id="nU"><i class="fas fa-users"></i><span>Users</span></div>
+        <div class="add-btn" onclick="openModal()"><i class="fas fa-plus"></i></div>
+        <div class="nav-item" onclick="showTab('settings')" id="nS"><i class="fas fa-cog"></i><span>Settings</span></div>
     </nav>
 
-    <div id="userModal" class="modal">
+    <div id="uModal" class="modal">
         <div class="modal-content">
-            <h2 id="userModalTitle">Add User</h2>
-            <input type="text" id="usernameInput" placeholder="Username" style="margin-bottom:10px;">
-            <input type="text" id="passwordInput" placeholder="Password" style="margin-bottom:10px;">
-            <input type="text" id="deviceIdInput" placeholder="Device ID" style="margin-bottom:10px;">
-            <input type="date" id="expiryDateInput" style="margin-bottom:15px;">
-            <button class="add-user-btn" style="width:100%; border-radius:6px; transform:none;" id="saveUserBtn">Save</button>
-            <button onclick="$('userModal').style.display='none'" style="width:100%; margin-top:10px; background:none; color:#ccc; border:none;">Cancel</button>
+            <h2>Add New User</h2>
+            <input type="text" id="uName" placeholder="Username">
+            <input type="text" id="uPass" placeholder="Password">
+            <input type="text" id="uDev" placeholder="Device ID">
+            <input type="date" id="uExp">
+            <button onclick="addUser()" style="background:var(--p); width:100%; padding:10px; border:none; border-radius:6px; font-weight:bold;">Save User</button>
+            <button onclick="closeModal()" style="background:none; color:#ccc; width:100%; border:none; margin-top:10px;">Cancel</button>
         </div>
     </div>
 
-    <div id="passwordModal" class="modal">
+    <div id="pModal" class="modal">
         <div class="modal-content">
-            <h2>Confirm Admin Password</h2>
-            <input type="password" id="adminPasswordInput" placeholder="Enter Password">
-            <button style="background:var(--primary-color); width:100%; padding:10px; margin-top:15px; border:none; border-radius:6px;" id="confirmUpdateBtn">Confirm</button>
+            <h2>Admin Confirmation</h2>
+            <input type="password" id="adminPass" placeholder="Enter Admin Password">
+            <button onclick="confirmUpdate()" style="background:var(--p); width:100%; padding:10px; border:none; border-radius:6px; font-weight:bold;">Confirm & Push to GitHub</button>
         </div>
     </div>
 
-    <div id="loading">Updating GitHub...</div>
     <div id="toast" class="toast"></div>
 
     <script>
-        const GITHUB_OWNER = "oktest-cloud";
-        const GITHUB_REPO = "keyok";
-        const GITHUB_FILE_PATH = "key.json"; 
-        const GITHUB_TOKEN = "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";
-        const ADMIN_PASSWORD = "dpmods";
-        const API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_FILE_PATH}`;
+        const OWNER = "oktest-cloud";
+        const REPO = "keyok";
+        const FILE = "key.json"; 
+        const TOKEN = "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";
+        const ADMIN_PWD = "dpmods";
+        const API_URL = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`;
 
         let configData = { dialog_config: {}, status_config: {}, users: [] };
-        let currentEditingIndex = -1;
         const $ = id => document.getElementById(id);
 
-        function showToast(m) { const t=$('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); }
-
+        function showToast(m) { const t=$('toast'); t.innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); }
+        function openModal() { $('uModal').style.display='flex'; }
+        function closeModal() { $('uModal').style.display='none'; }
         function showTab(t) {
-            $('usersTab').style.display = t === 'users' ? 'block' : 'none';
-            $('settingsTab').style.display = t === 'settings' ? 'block' : 'none';
+            $('usersTab').style.display = t==='users'?'block':'none';
+            $('settingsTab').style.display = t==='settings'?'block':'none';
+            $('nU').classList.toggle('active', t==='users');
+            $('nS').classList.toggle('active', t==='settings');
         }
 
-        function renderUsers() {
+        async function load() {
+            $('loading').style.display='flex';
+            try {
+                const res = await fetch(API_URL, { headers: { 'Authorization': `Bearer ${TOKEN}` } });
+                const json = await res.json();
+                configData = JSON.parse(atob(json.content));
+                render();
+                $('dialogTitle').value = configData.dialog_config.title || "";
+                $('maintenanceMsg').value = configData.status_config.maintenance_message || "";
+            } catch (e) { showToast("Error loading data from GitHub"); }
+            $('loading').style.display='none';
+        }
+
+        function render() {
             const list = $('userList'); list.innerHTML = '';
             configData.users.forEach((u, i) => {
-                const item = document.createElement('div');
-                item.className = 'user-item';
-                item.innerHTML = `<div><strong>${u.username}</strong><span>${u.device_id}</span></div>
-                                 <button onclick="deleteUser(${i})" style="background:none; border:none; color:red;"><i class="fas fa-trash"></i></button>`;
-                list.appendChild(item);
+                const div = document.createElement('div'); div.className = 'user-item';
+                div.innerHTML = `<div class="user-info"><strong>${u.username}</strong><span>ID: ${u.device_id} | Exp: ${u.expiry_date_utc}</span></div>
+                                 <button onclick="del(${i})" style="background:none; border:none; color:#FF4D4D; font-size:1.2rem;"><i class="fas fa-trash"></i></button>`;
+                list.appendChild(div);
             });
         }
 
-        async function loadConfig() {
-            $('loading').style.display = 'flex';
+        async function push() {
+            $('loading').style.display='flex';
+            $('loadMsg').innerText = "Pushing to GitHub...";
             try {
-                const res = await fetch(API_URL, { headers: { 'Authorization': `Bearer ${GITHUB_TOKEN}` } });
-                const data = await res.json();
-                configData = JSON.parse(atob(data.content));
-                renderUsers();
-            } catch (e) { showToast("Load Failed"); }
-            $('loading').style.display = 'none';
-        }
-
-        async function saveToGitHub() {
-            $('loading').style.display = 'flex';
-            try {
-                const res = await fetch(API_URL, { headers: { 'Authorization': `Bearer ${GITHUB_TOKEN}` } });
-                const data = await res.json();
+                const res = await fetch(API_URL, { headers: { 'Authorization': `Bearer ${TOKEN}` } });
+                const meta = await res.json();
                 const body = {
-                    message: "Update via Panel",
+                    message: "Update via Admin Panel",
                     content: btoa(unescape(encodeURIComponent(JSON.stringify(configData, null, 2)))),
-                    sha: data.sha
+                    sha: meta.sha
                 };
                 await fetch(API_URL, {
                     method: 'PUT',
-                    headers: { 'Authorization': `Bearer ${GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+                    headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
                 });
-                showToast("GitHub Updated!");
-            } catch (e) { showToast("Save Failed"); }
-            $('loading').style.display = 'none';
+                showToast("GitHub Updated Successfully!");
+            } catch (e) { showToast("Save Failed!"); }
+            $('loading').style.display='none';
+            load();
         }
 
-        function showUserModal() { $('userModal').style.display = 'flex'; }
-        
-        $('saveUserBtn').onclick = () => {
+        function addUser() {
             configData.users.push({
-                username: $('usernameInput').value,
-                password: $('passwordInput').value,
-                device_id: $('deviceIdInput').value,
-                expiry_date_utc: $('expiryDateInput').value
+                username: $('uName').value, password: $('uPass').value,
+                device_id: $('uDev').value, expiry_date_utc: $('uExp').value
             });
-            $('userModal').style.display = 'none';
-            renderUsers();
-            $('passwordModal').style.display = 'flex';
-        };
-
-        function deleteUser(i) {
-            configData.users.splice(i, 1);
-            renderUsers();
-            $('passwordModal').style.display = 'flex';
+            closeModal(); render(); triggerUpdate();
         }
 
-        function triggerSettingsUpdate() {
+        function del(i) { if(confirm("Delete User?")) { configData.users.splice(i, 1); render(); triggerUpdate(); } }
+        function triggerUpdate() {
             configData.dialog_config.title = $('dialogTitle').value;
-            $('passwordModal').style.display = 'flex';
+            configData.status_config.maintenance_message = $('maintenanceMsg').value;
+            $('pModal').style.display='flex';
         }
 
-        $('confirmUpdateBtn').onclick = () => {
-            if ($('adminPasswordInput').value === ADMIN_PASSWORD) {
-                $('passwordModal').style.display = 'none';
-                saveToGitHub();
-            } else { showToast("Wrong Password"); }
-        };
+        function confirmUpdate() {
+            if($('adminPass').value === ADMIN_PWD) { $('pModal').style.display='none'; push(); $('adminPass').value=''; }
+            else { showToast("Incorrect Admin Password!"); }
+        }
 
-        window.onload = loadConfig;
+        window.onload = load;
     </script>
 </body>
 </html>
-
