@@ -28,7 +28,7 @@
 </head>
 <body>
 
-    <header><h1>DPMods Admin Panel</h1></header>
+    <header><h1>DPMods Configuration</h1></header>
     <div id="loading"><i class="fas fa-spinner fa-spin fa-2x"></i><p id="loadMsg">Syncing with GitHub...</p></div>
 
     <div class="container">
@@ -38,37 +38,43 @@
         </div>
         <div id="settingsTab" style="display:none;">
             <h2>Global Settings</h2>
-            <label>Dialog Title</label>
-            <input type="text" id="dialogTitle">
-            <label>Maintenance Message</label>
-            <textarea id="maintenanceMsg" rows="3"></textarea>
-            <button onclick="triggerUpdate()" style="background:var(--p); width:100%; padding:10px; border:none; border-radius:6px; font-weight:bold;">Save Global Settings</button>
+            <div class="form-group">
+                <label>Dialog Title</label>
+                <input type="text" id="dialogTitle">
+            </div>
+            <div class="form-group">
+                <label>Maintenance Message</label>
+                <textarea id="maintenanceMsg" rows="3"></textarea>
+            </div>
+            <button onclick="triggerGlobalUpdate()" style="background:var(--p); width:100%; padding:10px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Save Global Settings</button>
         </div>
     </div>
 
     <nav>
         <div class="nav-item active" onclick="showTab('users')" id="nU"><i class="fas fa-users"></i><span>Users</span></div>
-        <div class="add-btn" onclick="openModal()"><i class="fas fa-plus"></i></div>
+        <div class="add-btn" onclick="openUserModal()"><i class="fas fa-plus"></i></div>
         <div class="nav-item" onclick="showTab('settings')" id="nS"><i class="fas fa-cog"></i><span>Settings</span></div>
     </nav>
 
     <div id="uModal" class="modal">
         <div class="modal-content">
-            <h2>Add New User</h2>
+            <h2 id="modalTitle">Add New User</h2>
             <input type="text" id="uName" placeholder="Username">
             <input type="text" id="uPass" placeholder="Password">
             <input type="text" id="uDev" placeholder="Device ID">
             <input type="date" id="uExp">
-            <button onclick="addUser()" style="background:var(--p); width:100%; padding:10px; border:none; border-radius:6px; font-weight:bold;">Save User</button>
-            <button onclick="closeModal()" style="background:none; color:#ccc; width:100%; border:none; margin-top:10px;">Cancel</button>
+            <button onclick="saveUser()" style="background:var(--p); width:100%; padding:10px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Save User</button>
+            <button onclick="closeUserModal()" style="background:none; color:#ccc; width:100%; border:none; margin-top:10px; cursor:pointer;">Cancel</button>
         </div>
     </div>
 
     <div id="pModal" class="modal">
         <div class="modal-content">
-            <h2>Admin Confirmation</h2>
-            <input type="password" id="adminPass" placeholder="Enter Admin Password">
-            <button onclick="confirmUpdate()" style="background:var(--p); width:100%; padding:10px; border:none; border-radius:6px; font-weight:bold;">Confirm & Push to GitHub</button>
+            <h2>Admin Password</h2>
+            <p>Enter password to push changes to GitHub.</p>
+            <input type="password" id="adminPass" placeholder="Password">
+            <button onclick="confirmAndPush()" style="background:var(--p); width:100%; padding:10px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Confirm Update</button>
+            <button onclick="$('pModal').style.display='none'" style="background:none; color:#ccc; width:100%; border:none; margin-top:10px; cursor:pointer;">Cancel</button>
         </div>
     </div>
 
@@ -83,11 +89,25 @@
         const API_URL = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE}`;
 
         let configData = { dialog_config: {}, status_config: {}, users: [] };
+        let editingIndex = -1;
         const $ = id => document.getElementById(id);
 
         function showToast(m) { const t=$('toast'); t.innerText=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 3000); }
-        function openModal() { $('uModal').style.display='flex'; }
-        function closeModal() { $('uModal').style.display='none'; }
+        function openUserModal(index = -1) {
+            editingIndex = index;
+            if (index > -1) {
+                const u = configData.users[index];
+                $('uName').value = u.username; $('uPass').value = u.password;
+                $('uDev').value = u.device_id; $('uExp').value = u.expiry_date_utc;
+                $('modalTitle').innerText = "Edit User";
+            } else {
+                $('uName').value = ''; $('uPass').value = ''; $('uDev').value = ''; $('uExp').value = '';
+                $('modalTitle').innerText = "Add New User";
+            }
+            $('uModal').style.display='flex';
+        }
+        function closeUserModal() { $('uModal').style.display='none'; }
+        
         function showTab(t) {
             $('usersTab').style.display = t==='users'?'block':'none';
             $('settingsTab').style.display = t==='settings'?'block':'none';
@@ -95,30 +115,33 @@
             $('nS').classList.toggle('active', t==='settings');
         }
 
-        async function load() {
+        async function loadData() {
             $('loading').style.display='flex';
             try {
                 const res = await fetch(API_URL, { headers: { 'Authorization': `Bearer ${TOKEN}` } });
                 const json = await res.json();
                 configData = JSON.parse(atob(json.content));
-                render();
-                $('dialogTitle').value = configData.dialog_config.title || "";
-                $('maintenanceMsg').value = configData.status_config.maintenance_message || "";
-            } catch (e) { showToast("Error loading data from GitHub"); }
+                renderUsers();
+                if(configData.dialog_config) $('dialogTitle').value = configData.dialog_config.title || "";
+                if(configData.status_config) $('maintenanceMsg').value = configData.status_config.maintenance_message || "";
+            } catch (e) { showToast("Load Failed from GitHub"); }
             $('loading').style.display='none';
         }
 
-        function render() {
+        function renderUsers() {
             const list = $('userList'); list.innerHTML = '';
             configData.users.forEach((u, i) => {
                 const div = document.createElement('div'); div.className = 'user-item';
                 div.innerHTML = `<div class="user-info"><strong>${u.username}</strong><span>ID: ${u.device_id} | Exp: ${u.expiry_date_utc}</span></div>
-                                 <button onclick="del(${i})" style="background:none; border:none; color:#FF4D4D; font-size:1.2rem;"><i class="fas fa-trash"></i></button>`;
+                                 <div>
+                                     <button onclick="openUserModal(${i})" style="background:none; border:none; color:var(--ts); margin-right:10px; cursor:pointer;"><i class="fas fa-edit"></i></button>
+                                     <button onclick="deleteUser(${i})" style="background:none; border:none; color:#FF4D4D; cursor:pointer;"><i class="fas fa-trash"></i></button>
+                                 </div>`;
                 list.appendChild(div);
             });
         }
 
-        async function push() {
+        async function pushToGitHub() {
             $('loading').style.display='flex';
             $('loadMsg').innerText = "Pushing to GitHub...";
             try {
@@ -129,38 +152,43 @@
                     content: btoa(unescape(encodeURIComponent(JSON.stringify(configData, null, 2)))),
                     sha: meta.sha
                 };
-                await fetch(API_URL, {
+                const updateRes = await fetch(API_URL, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify(body)
                 });
-                showToast("GitHub Updated Successfully!");
+                if(updateRes.ok) showToast("GitHub Updated Successfully!");
+                else throw new Error();
             } catch (e) { showToast("Save Failed!"); }
             $('loading').style.display='none';
-            load();
+            loadData();
         }
 
-        function addUser() {
-            configData.users.push({
-                username: $('uName').value, password: $('uPass').value,
-                device_id: $('uDev').value, expiry_date_utc: $('uExp').value
-            });
-            closeModal(); render(); triggerUpdate();
+        function saveUser() {
+            const u = { username: $('uName').value, password: $('uPass').value, device_id: $('uDev').value, expiry_date_utc: $('uExp').value };
+            if(editingIndex > -1) configData.users[editingIndex] = u;
+            else configData.users.push(u);
+            closeUserModal(); renderUsers();
+            $('pModal').style.display='flex';
         }
 
-        function del(i) { if(confirm("Delete User?")) { configData.users.splice(i, 1); render(); triggerUpdate(); } }
-        function triggerUpdate() {
+        function deleteUser(i) { if(confirm("Delete User?")) { configData.users.splice(i, 1); renderUsers(); $('pModal').style.display='flex'; } }
+        
+        function triggerGlobalUpdate() {
+            if(!configData.dialog_config) configData.dialog_config = {};
+            if(!configData.status_config) configData.status_config = {};
             configData.dialog_config.title = $('dialogTitle').value;
             configData.status_config.maintenance_message = $('maintenanceMsg').value;
             $('pModal').style.display='flex';
         }
 
-        function confirmUpdate() {
-            if($('adminPass').value === ADMIN_PWD) { $('pModal').style.display='none'; push(); $('adminPass').value=''; }
-            else { showToast("Incorrect Admin Password!"); }
+        function confirmAndPush() {
+            if($('adminPass').value === ADMIN_PWD) { $('pModal').style.display='none'; pushToGitHub(); $('adminPass').value=''; }
+            else { showToast("Wrong Admin Password!"); }
         }
 
-        window.onload = load;
+        window.onload = loadData;
     </script>
 </body>
 </html>
+
